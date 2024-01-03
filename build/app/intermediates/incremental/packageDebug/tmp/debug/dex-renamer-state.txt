@@ -1,0 +1,4 @@
+#Wed Jan 03 16:35:02 IST 2024
+base.0=/Users/apple/Desktop/testing apps/tiktaktoo/build/app/intermediates/dex/debug/mergeDexDebug/classes.dex
+renamed.0=classes.dex
+path.0=classes.dex
