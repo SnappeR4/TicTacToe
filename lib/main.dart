@@ -1,15 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() {
-  runApp(TicTacToeApp());
+  runApp(const TicTacToeApp());
 }
 
 class TicTacToeApp extends StatelessWidget {
+  const TicTacToeApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Tic Tac Toe',
       home: TicTacToeGame(),
     );
@@ -17,7 +21,10 @@ class TicTacToeApp extends StatelessWidget {
 }
 
 class TicTacToeGame extends StatefulWidget {
+  const TicTacToeGame({super.key});
+
   @override
+  // ignore: library_private_types_in_public_api
   _TicTacToeGameState createState() => _TicTacToeGameState();
 }
 
@@ -32,6 +39,8 @@ class _TicTacToeGameState extends State<TicTacToeGame> {
   int player1Wins = 0;
   int player2Wins = 0;
   int drawCount = 0;
+
+  bool botPlay = false;
 
   @override
   void initState() {
@@ -60,8 +69,26 @@ class _TicTacToeGameState extends State<TicTacToeGame> {
           timer.cancel();
         } else {
           currentPlayer = (currentPlayer == "X") ? "O" : "X";
+          if (botPlay &&
+              currentPlayer == "O" &&
+              !isBoardFull() &&
+              winner == null) {
+            makeBotMove();
+          }
         }
       });
+    }
+  }
+
+  void makeBotMove() {
+    // Simple bot logic: Finds the first empty cell and makes a move
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        if (board[i][j] == "") {
+          makeMove(i, j);
+          return;
+        }
+      }
     }
   }
 
@@ -99,7 +126,7 @@ class _TicTacToeGameState extends State<TicTacToeGame> {
 
   void startTimer() {
     countdown = 10;
-    timer = Timer.periodic(Duration(seconds: 1), (timer) {
+    timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         if (countdown <= 0) {
           timer.cancel();
@@ -131,21 +158,24 @@ class _TicTacToeGameState extends State<TicTacToeGame> {
 
   Widget buildTile(int row, int col) {
     return GestureDetector(
-      onTap: () => makeMove(row, col),
-      child: Container(
-        width: 100.0,
-        height: 100.0,
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.black),
-        ),
-        child: Center(
-          child: Text(
-            board[row][col],
-            style: TextStyle(fontSize: 40.0),
+        onTap: () => makeMove(row, col),
+        child: Container(
+          width: 100.0,
+          height: 100.0,
+          decoration: BoxDecoration(
+              border: Border.all(color: Colors.black),
+              color: const Color.fromARGB(255, 255, 255, 255)),
+          child: Center(
+            child: Text(
+              board[row][col],
+              style: TextStyle(
+                fontSize: 50.0,
+                fontFamily: 'RubikMaps',
+                color: board[row][col] == 'X' ? Colors.red : Colors.lightBlue,
+              ),
+            ),
           ),
-        ),
-      ),
-    );
+        ));
   }
 
   Color getTextColor() {
@@ -158,75 +188,185 @@ class _TicTacToeGameState extends State<TicTacToeGame> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Tic Tac Toe'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              (winner != null) ? '$winner wins!' : 'Player: $currentPlayer',
-              style: TextStyle(fontSize: 20.0),
-            ),
-            SizedBox(height: 20.0),
-            Text(
-              'Time remaining: $countdown seconds',
-              style: TextStyle(fontSize: 20.0, color: getTextColor()),
-            ),
-            SizedBox(height: 20.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(Icons.star, color: Colors.blue),
-                Text(
-                  'Player 1 Wins: $player1Wins',
-                  style: TextStyle(fontSize: 16.0),
+    return WillPopScope(
+      onWillPop: () async {
+        bool exitConfirmed = await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Exit App?'),
+            content: const Text('Do you want to exit the app?'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(false);
+                },
+                child: const Text('No'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(true);
+                },
+                child: const Text(
+                  'Yes',
+                  style: TextStyle(color: Colors.red),
                 ),
-              ],
+              ),
+            ],
+          ),
+        );
+
+        if (exitConfirmed == true) {
+          SystemNavigator.pop();
+        }
+
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF274C43),
+          title: const Text(
+            'Tic Tac Toe',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontFamily: 'RubikMaps',
             ),
-            SizedBox(height: 10.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(Icons.star, color: Colors.red),
-                Text(
-                  'Player 2 Wins: $player2Wins',
-                  style: TextStyle(fontSize: 16.0),
+          ),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: <Widget>[
+              const SizedBox(height: 20.0),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: <Widget>[
+                  Text(
+                    'O',
+                    style: TextStyle(
+                        fontSize: 50.0,
+                        fontFamily: 'RubikMaps',
+                        color: Colors.lightBlue),
+                  ),
+                  Text(
+                    '-',
+                    style: TextStyle(
+                        fontSize: 50.0,
+                        fontFamily: 'RubikMaps',
+                        color: Colors.black),
+                  ),
+                  Text(
+                    'X',
+                    style: TextStyle(
+                        fontSize: 50.0,
+                        fontFamily: 'RubikMaps',
+                        color: Colors.red),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: <Widget>[
+                  Text(
+                    '$player2Wins Wins',
+                    style: const TextStyle(
+                      fontSize: 16.0,
+                    ),
+                  ),
+                  Text(
+                    '$drawCount Draws',
+                    style: const TextStyle(
+                      fontSize: 16.0,
+                    ),
+                  ),
+                  Text(
+                    '$player1Wins Wins',
+                    style: const TextStyle(
+                      fontSize: 16.0,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20.0),
+              Text(
+                '$countdown',
+                style: TextStyle(
+                  fontSize: 50.0,
+                  color: getTextColor(),
+                  fontFamily: 'RubikMaps',
                 ),
-              ],
-            ),
-            SizedBox(height: 10.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(Icons.star, color: Colors.grey),
-                Text(
-                  'Draws: $drawCount',
-                  style: TextStyle(fontSize: 16.0),
+              ),
+              const SizedBox(height: 20.0),
+              Text(
+                (winner != null)
+                    ? '$winner wins!'
+                    : (isBoardFull() ? 'Draw!' : 'Player: $currentPlayer'),
+                style: TextStyle(
+                  fontSize: 50.0,
+                  fontFamily: 'RubikMaps',
+                  color: (winner != null)
+                      ? (winner == 'O' ? Colors.blue : Colors.red)
+                      : (isBoardFull() ? Colors.orange : Colors.black),
                 ),
-              ],
-            ),
-            SizedBox(height: 20.0),
-            Column(
-              children: List.generate(
-                3,
-                (row) => Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    3,
-                    (col) => buildTile(row, col),
+              ),
+              const SizedBox(height: 20.0),
+              Column(
+                children: List.generate(
+                  3,
+                  (row) => Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      3,
+                      (col) => buildTile(row, col),
+                    ),
                   ),
                 ),
               ),
-            ),
-            SizedBox(height: 20.0),
-            ElevatedButton(
-              onPressed: resetGame,
-              child: Text('Restart Game'),
-            ),
-          ],
+              const SizedBox(height: 20.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  FloatingActionButton(
+                    onPressed: () {
+                      setState(() {
+                        botPlay = !botPlay;
+                        if (botPlay && currentPlayer == "O") {
+                          makeBotMove();
+                        }
+                      });
+                    },
+                    tooltip: 'Enable/Disable Bot',
+                    backgroundColor: Colors.white,
+                    child: botPlay
+                        ? Image.asset(
+                            'assets/bot2.png',
+                            width:
+                                50, // Set the width and height based on your image size
+                            height: 50,
+                          )
+                        : Image.asset(
+                            'assets/bot1.png', // Replace with your outlined robot image if available
+                            width: 50,
+                            height: 50,
+                          ),
+                  ),
+                  const SizedBox(height: 1.0),
+                  const SizedBox(height: 1.0),
+                  const SizedBox(height: 1.0),
+                  FloatingActionButton(
+                    onPressed: resetGame,
+                    tooltip: 'Restart Game',
+                    backgroundColor: Colors.white,
+                    child: const Icon(
+                      Icons.restart_alt_sharp,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
